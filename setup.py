@@ -17,7 +17,10 @@ setup(
             ],
             extra_compile_args={
                 'cxx': ['-O3'],
-                'nvcc': ['-O3'],
+                'nvcc': [
+                    '-O3',
+                    '-gencode=arch=compute_72,code=sm_72',
+                ],
             }),
     ],
     cmdclass={ 'build_ext' : BuildExtension }

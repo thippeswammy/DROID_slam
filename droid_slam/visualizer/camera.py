@@ -6,14 +6,13 @@ from glm import cos, radians, sin
 
 import moderngl_window
 from moderngl_window.scene.camera import Camera
-
-
+from typing import Any, Optional, Union, Tuple
 class OrbitCamera(Camera):
     def __init__(
         self,
-        target: Union[glm.vec3, tuple[float, float, float]] = (0.0, 0.0, 0.0),
+        target: Union[glm.vec3, Tuple[float, float, float]] = (0.0, 0.0, 0.0),
         radius: float = 2.0,
-        angles: tuple[float, float] = (60.0, -100.0),
+        angles: Tuple[float, float] = (60.0, -100.0),
         **kwargs: Any,
     ):
         self.radius = radius  # radius in base units

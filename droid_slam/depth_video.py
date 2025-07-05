@@ -3,7 +3,7 @@ import torch
 import lietorch
 import droid_backends
 
-from torch.multiprocessing import Process, Queue, Lock, Value
+from torch.multiprocessing import Process, Queue, Lock
 from collections import OrderedDict
 
 from droid_net import cvx_upsample
@@ -11,34 +11,39 @@ import geom.projective_ops as pops
 
 class DepthVideo:
     def __init__(self, image_size=[480, 640], buffer=1024, stereo=False, device="cuda:0"):
-                
-        # current keyframe count
+        from torch.multiprocessing import Value
+
         self.counter = Value('i', 0)
         self.ready = Value('i', 0)
         self.ht = ht = image_size[0]
         self.wd = wd = image_size[1]
 
+        print("Device:", device)
+
         ### state attributes ###
-        self.tstamp = torch.zeros(buffer, device=device, dtype=torch.float).share_memory_()
+        self.tstamp = torch.zeros(buffer, dtype=torch.float, device='cpu').share_memory_().to(device)
         self.images = torch.zeros(buffer, 3, ht, wd, device=device, dtype=torch.uint8)
-        self.dirty = torch.zeros(buffer, device=device, dtype=torch.bool).share_memory_()
-        self.red = torch.zeros(buffer, device=device, dtype=torch.bool).share_memory_()
-        self.poses = torch.zeros(buffer, 7, device=device, dtype=torch.float).share_memory_()
-        self.disps = torch.ones(buffer, ht//8, wd//8, device=device, dtype=torch.float).share_memory_()
-        self.disps_sens = torch.zeros(buffer, ht//8, wd//8, device=device, dtype=torch.float).share_memory_()
-        self.disps_up = torch.zeros(buffer, ht, wd, device=device, dtype=torch.float).share_memory_()
-        self.intrinsics = torch.zeros(buffer, 4, device=device, dtype=torch.float).share_memory_()
+
+        self.dirty = torch.zeros(buffer, dtype=torch.bool, device='cpu').share_memory_().to(device)
+        self.red = torch.zeros(buffer, dtype=torch.bool, device='cpu').share_memory_().to(device)
+
+        self.poses = torch.zeros(buffer, 7, dtype=torch.float, device='cpu').share_memory_().to(device)
+        self.disps = torch.ones(buffer, ht//8, wd//8, dtype=torch.float, device='cpu').share_memory_().to(device)
+        self.disps_sens = torch.zeros(buffer, ht//8, wd//8, dtype=torch.float, device='cpu').share_memory_().to(device)
+        self.disps_up = torch.zeros(buffer, ht, wd, dtype=torch.float, device='cpu').share_memory_().to(device)
+        self.intrinsics = torch.zeros(buffer, 4, dtype=torch.float, device='cpu').share_memory_().to(device)
 
         self.stereo = stereo
         c = 1 if not self.stereo else 2
 
         ### feature attributes ###
-        self.fmaps = torch.zeros(buffer, c, 128, ht//8, wd//8, dtype=torch.half, device=device).share_memory_()
-        self.nets = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device=device).share_memory_()
-        self.inps = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device=device).share_memory_()
+        self.fmaps = torch.zeros(buffer, c, 128, ht//8, wd//8, dtype=torch.half, device='cpu').share_memory_().to(device)
+        self.nets = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device='cpu').share_memory_().to(device)
+        self.inps = torch.zeros(buffer, 128, ht//8, wd//8, dtype=torch.half, device='cpu').share_memory_().to(device)
 
         # initialize poses to identity transformation
         self.poses[:] = torch.as_tensor([0, 0, 0, 0, 0, 0, 1], dtype=torch.float, device=device)
+
         
     def to(self, device="cuda"):
         self.tstamp = self.tstamp.to(device=device)
