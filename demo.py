@@ -11,7 +11,7 @@ import os
 import glob
 import time
 import argparse
-
+import rospy
 from torch.multiprocessing import Process
 from droid import Droid
 from droid_async import DroidAsync
@@ -80,6 +80,7 @@ def save_reconstruction(droid, save_path):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to YAML config file")
+    parser.add_argument("--ros", action="store_true", help="Enable ROS2 publishing")
     # Core arguments
     parser.add_argument("--imagedir", type=str, help="Path to image directory")
     parser.add_argument("--calib", type=str, help="Path to calibration file")
@@ -89,6 +90,7 @@ if __name__ == "__main__":
     parser.add_argument("--buffer", type=int, default=1024)
     parser.add_argument("--image_size", nargs='+', type=int, default=[240, 320])
     parser.add_argument("--disable_vis", default=True, action="store_true")
+    parser.add_argument("--disable_ros", default=False, action="store_true")
     # VO-specific parameters
     parser.add_argument("--beta", type=float, default=0.3)
     parser.add_argument("--filter_thresh", type=float, default=2.4)

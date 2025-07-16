@@ -8,10 +8,10 @@ from depth_video import DepthVideo
 from droid_backend import DroidBackend
 from droid_frontend import DroidFrontend
 from droid_net import DroidNet
-from factor_graph import FactorGraph
 from motion_filter import MotionFilter
 from trajectory_filler import PoseTrajectoryFiller
-
+from droid_slam.ros.trajectory_publisher import TrajectoryPublisher
+import rospy
 
 class Droid:
     def __init__(self, args):
@@ -22,7 +22,7 @@ class Droid:
 
         # store images, depth, poses, intrinsics (shared between processes)
         self.video = DepthVideo(args.image_size, args.buffer, stereo=args.stereo)
-        
+
         # filter incoming frames so that there is enough motion
         self.filterx = MotionFilter(self.net, self.video, thresh=args.filter_thresh)
 
@@ -31,6 +31,14 @@ class Droid:
 
         # backend process
         self.backend = DroidBackend(self.net, self.video, self.args)
+
+        # ROS2 integration
+        if getattr(args, "ros", False):
+            rospy.init_node('droid_slam_node', anonymous=True)
+            self.ros_enabled = True
+            self.pose_publisher = TrajectoryPublisher(self.video)  # supports pose+path
+        else:
+            self.ros_enabled = False
 
         if not self.disable_vis:
             from visualizer.droid_visualizer import visualization_fn
@@ -71,6 +79,9 @@ class Droid:
             # local bundle adjustment
             self.frontend()
 
+            if self.ros_enabled:
+                self.pose_publisher.publish_latest(tstamp)
+
     def terminate(self, stream=None):
         """ terminate the visualization process, return poses [t, q] """
 
@@ -79,6 +90,13 @@ class Droid:
         torch.cuda.empty_cache()
         print("#" * 32)
         self.backend(7)
+
+        # if hasattr(self, 'pose_publisher'):
+        #     self.pose_publisher.destroy_node()
+        #     rclpy.shutdown()
+
+        if self.ros_enabled:
+            rospy.signal_shutdown('Finished')
 
         torch.cuda.empty_cache()
         print("#" * 32)

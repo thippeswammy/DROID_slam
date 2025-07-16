@@ -1,6 +1,7 @@
 imagedir: data/kitti/short/image_0
 calib: data/kitti/calib.txt
 stride: 2
+disable_ros: false
 disable_vis: true
 weights: droid.pth
 buffer: 30
