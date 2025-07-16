@@ -105,6 +105,10 @@ class PoseTrajectoryFiller:
 
         if len(tstamps) > 0:
             pose_list += self.__fill(tstamps, images, intrinsics)
+        # for i, pose_batch in enumerate(pose_list):
+        #     for j, pose in enumerate(pose_batch):
+        #         print(f"Frame {i:03d} | Position: x={t[0]:.3f}, y={t[1]:.3f}, z={t[2]:.3f}")
+        #         print("-" * 50)
 
         # stitch pose segments together
         return lietorch.cat(pose_list, 0)

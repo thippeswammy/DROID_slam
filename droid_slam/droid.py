@@ -1,17 +1,16 @@
-import torch
 import lietorch
 import numpy as np
-
-from droid_net import DroidNet
-from depth_video import DepthVideo
-from motion_filter import MotionFilter
-from droid_frontend import DroidFrontend
-from droid_backend import DroidBackend
-from trajectory_filler import PoseTrajectoryFiller
-from factor_graph import FactorGraph
-
+import torch
 from collections import OrderedDict
 from torch.multiprocessing import Process
+
+from depth_video import DepthVideo
+from droid_backend import DroidBackend
+from droid_frontend import DroidFrontend
+from droid_net import DroidNet
+from factor_graph import FactorGraph
+from motion_filter import MotionFilter
+from trajectory_filler import PoseTrajectoryFiller
 
 
 class Droid:
@@ -23,43 +22,28 @@ class Droid:
 
         # store images, depth, poses, intrinsics (shared between processes)
         self.video = DepthVideo(args.image_size, args.buffer, stereo=args.stereo)
-
+        
         # filter incoming frames so that there is enough motion
         self.filterx = MotionFilter(self.net, self.video, thresh=args.filter_thresh)
 
         # frontend process
         self.frontend = DroidFrontend(self.net, self.video, self.args)
-        
+
         # backend process
         self.backend = DroidBackend(self.net, self.video, self.args)
 
-        # visualizer
-        # if not self.disable_vis:
-        #     from visualizer.droid_visualizer import visualization_fn
-        #     # self.visualizer = Process(target=visualization_fn, args=(self.video, None))
-        #     # self.visualizer.start()
-        #     self.video = DepthVideo(args.image_size, args.buffer, stereo=args.stereo)
-        #     self.graph = FactorGraph()
-        #     self.frontend = DroidFrontend(self.video, self.graph, buffer=args.buffer)
-
-        #     # Only after all 3 are defined
-        #     self.visualizer = visualization_fn(self.video, self.graph, self.frontend)
-        #     self.visualizer().start()
-        # post processor - fill in poses for non-keyframes
-        self.traj_filler = PoseTrajectoryFiller(self.net, self.video)
-        # visualizer
-        # visualizer
         if not self.disable_vis:
             from visualizer.droid_visualizer import visualization_fn
-            from factor_graph import FactorGraph  # Ensure this import exists at top of file
-
-            self.graph = FactorGraph(self.video, self.net.update)
-            self.frontend.graph = self.graph  # Attach graph if needed by visualizer
-            self.visualizer = visualization_fn(self.video, self.graph)
+            self.visualizer = Process(target=visualization_fn, args=(self.video, None))
             self.visualizer.start()
 
+        # from visualizer.droid_visualizer_pose import visualization_fn
+        # self.visualizer = Process(target=visualization_fn, args=(self.video, None))
+        # self.visualizer.start()
 
-
+        # post processor - fill in poses for non-keyframes
+        self.traj_filler = PoseTrajectoryFiller(self.net, self.video)
+        print(self.traj_filler)
 
     def load_weights(self, weights):
         """ load trained model weights """
@@ -102,4 +86,3 @@ class Droid:
 
         camera_trajectory = self.traj_filler(stream)
         return camera_trajectory.inv().data.cpu().numpy()
-

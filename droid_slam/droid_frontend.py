@@ -1,14 +1,13 @@
-import torch
 import lietorch
 import numpy as np
-
+import torch
 from lietorch import SE3
-from factor_graph import FactorGraph
 
 from cuda_timer import CudaTimer
-
+from factor_graph import FactorGraph
 
 ENABLE_TIMING = False
+
 
 class DroidFrontend:
     def __init__(self, net, video, args):
@@ -51,7 +50,7 @@ class DroidFrontend:
         self.video.poses[self.t1] = self.video.poses[self.t1 - 1]
 
         self.video.disps[self.t1] = torch.quantile(
-            self.video.disps[self.t1 - 3 : self.t1 - 1], 0.5
+            self.video.disps[self.t1 - 3: self.t1 - 1], 0.5
         )
 
         # damped linear velocity model
@@ -106,15 +105,27 @@ class DroidFrontend:
             for itr in range(self.iters2):
                 self.graph.update(None, None, use_inactive=True)
 
+            # ### ✅ SAFETY CHECK for last index ###
+            # if self.t1 < len(self.video.poses):
+            #     # set pose and disparity for next iteration
+            #     self.video.poses[self.t1] = self.video.poses[self.t1 - 1]
+            #     self.video.disps[self.t1] = torch.quantile(
+            #         self.video.disps[self.t1 - self.depth_window - 1: self.t1 - 1], 0.7
+            #     )
+            #
+            #     # update visualization
+            #     self.video.dirty[self.graph.ii.min(): self.t1] = True
+            # else:
+            #     print(f"[WARNING] Skipping pose update at t={self.t1} — buffer limit reached.")
 
         # set pose for next itration
         self.video.poses[self.t1] = self.video.poses[self.t1 - 1]
         self.video.disps[self.t1] = torch.quantile(
-            self.video.disps[self.t1 - self.depth_window - 1 : self.t1 - 1], 0.7
+            self.video.disps[self.t1 - self.depth_window - 1: self.t1 - 1], 0.7
         )
 
         # update visualization
-        self.video.dirty[self.graph.ii.min() : self.t1] = True
+        self.video.dirty[self.graph.ii.min(): self.t1] = True
 
     def _initialize(self):
         """initialize the SLAM system"""
@@ -136,7 +147,7 @@ class DroidFrontend:
 
         # self.video.normalize()
         self.video.poses[self.t1] = self.video.poses[self.t1 - 1].clone()
-        self.video.disps[self.t1] = self.video.disps[self.t1 - 4 : self.t1].mean()
+        self.video.disps[self.t1] = self.video.disps[self.t1 - 4: self.t1].mean()
 
         # initialization complete
         self.is_initialized = True
