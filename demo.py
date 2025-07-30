@@ -87,8 +87,10 @@ if __name__ == "__main__":
     output_file = "resource_usage.json"
     if os.path.exists(stop_file):
         os.remove(stop_file)
-    monitor_cmd = ["python","resource_monitor.py", '--pid', str(PID)]
-    monitor_processer  = subprocess.Popen(monitor_cmd)
+
+    monitor_cmd = ["python", "resource_monitor.py", "--pid", str(PID), "--output_file", output_file,
+                   "--stop_file", stop_file]
+    monitor_processer = subprocess.Popen(monitor_cmd)
     print(f"Stated monitoring process with PID {monitor_processer.pid}")
     Start_time = time.time_ns()
     parser = argparse.ArgumentParser()
@@ -152,7 +154,7 @@ if __name__ == "__main__":
 
     droid = None
     tstamps = []
-    counter=0
+    counter = 0
     for (t, image, intrinsics) in tqdm(image_stream(args.imagedir, args.calib, args.stride)):
         if t < args.t0:
             continue
@@ -165,13 +167,13 @@ if __name__ == "__main__":
             droid = DroidAsync(args) if args.asynchronous else Droid(args)
 
         droid.track(t, image, intrinsics=intrinsics)
-        counter+=1
+        counter += 1
 
     traj_est = droid.terminate(image_stream(args.imagedir, args.calib, args.stride))
     end_time = time.time_ns()
-    total_time = (end_time-Start_time)/1e9
+    total_time = (end_time - Start_time) / 1e9
     num_frames = counter
-    fps = num_frames/total_time if total_time>0 else 0
+    fps = num_frames / total_time if total_time > 0 else 0
     print(f"Total Time = {total_time:.2f} s")
     print(f"Frames processed = {num_frames}")
     print(f"FPS = {fps:.2f} fps")
@@ -180,19 +182,19 @@ if __name__ == "__main__":
     monitor_processer.wait()
 
     if os.path.exists(output_file):
-        with open(output_file,'r') as f:
+        with open(output_file, 'r') as f:
             avg_res = json.load(f)
         print(avg_res)
         os.remove(output_file)
     else:
         print("No monitoring results found.")
-    
+
     if os.path.exists(stop_file):
         os.remove(stop_file)
 
     import csv
 
-    output_csv_path = "kitti_seq_03_recon.csv"
+    output_csv_path = "kitti_seq_01_recon.csv"
 
     with open(output_csv_path, mode="w", newline="") as file:
         writer = csv.writer(file)
