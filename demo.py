@@ -5,16 +5,21 @@ import yaml
 from tqdm import tqdm
 import numpy as np
 import torch
-import lietorch
 import cv2
 import os
+import lietorch
 import glob
 import time
 import argparse
 import rospy
-from torch.multiprocessing import Process
 from droid import Droid
 from droid_async import DroidAsync
+import time
+import json
+import subprocess
+import os
+import time
+from droid_slam.ros import trajectory_publisher
 
 import torch.nn.functional as F
 
@@ -38,7 +43,6 @@ def image_stream(imagedir, calib, stride):
     K[1, 2] = cy
 
     image_list = sorted(os.listdir(imagedir))[::stride]
-    print("image_list=>", image_list[0])
     for t, imfile in enumerate(image_list):
         image = cv2.imread(os.path.join(imagedir, imfile))
         if len(calib) > 4:
@@ -78,6 +82,15 @@ def save_reconstruction(droid, save_path):
 
 
 if __name__ == "__main__":
+    PID = os.getpid()
+    stop_file = "stop.txt"
+    output_file = "resource_usage.json"
+    if os.path.exists(stop_file):
+        os.remove(stop_file)
+    monitor_cmd = ["python","resource_monitor.py", '--pid', str(PID)]
+    monitor_processer  = subprocess.Popen(monitor_cmd)
+    print(f"Stated monitoring process with PID {monitor_processer.pid}")
+    Start_time = time.time_ns()
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to YAML config file")
     parser.add_argument("--ros", action="store_true", help="Enable ROS2 publishing")
@@ -85,7 +98,7 @@ if __name__ == "__main__":
     parser.add_argument("--imagedir", type=str, help="Path to image directory")
     parser.add_argument("--calib", type=str, help="Path to calibration file")
     parser.add_argument("--t0", type=int, default=0, help="Starting frame")
-    parser.add_argument("--stride", type=int, default=3, help="Frame stride")
+    parser.add_argument("--stride", type=int, default=1, help="Frame stride")
     parser.add_argument("--weights", type=str, default="droid.pth")
     parser.add_argument("--buffer", type=int, default=1024)
     parser.add_argument("--image_size", nargs='+', type=int, default=[240, 320])
@@ -139,6 +152,7 @@ if __name__ == "__main__":
 
     droid = None
     tstamps = []
+    counter=0
     for (t, image, intrinsics) in tqdm(image_stream(args.imagedir, args.calib, args.stride)):
         if t < args.t0:
             continue
@@ -151,11 +165,34 @@ if __name__ == "__main__":
             droid = DroidAsync(args) if args.asynchronous else Droid(args)
 
         droid.track(t, image, intrinsics=intrinsics)
+        counter+=1
 
     traj_est = droid.terminate(image_stream(args.imagedir, args.calib, args.stride))
+    end_time = time.time_ns()
+    total_time = (end_time-Start_time)/1e9
+    num_frames = counter
+    fps = num_frames/total_time if total_time>0 else 0
+    print(f"Total Time = {total_time:.2f} s")
+    print(f"Frames processed = {num_frames}")
+    print(f"FPS = {fps:.2f} fps")
+    with open(stop_file, 'w') as f:
+        f.write("stop")
+    monitor_processer.wait()
+
+    if os.path.exists(output_file):
+        with open(output_file,'r') as f:
+            avg_res = json.load(f)
+        print(avg_res)
+        os.remove(output_file)
+    else:
+        print("No monitoring results found.")
+    
+    if os.path.exists(stop_file):
+        os.remove(stop_file)
+
     import csv
 
-    output_csv_path = "trajectory_output.csv"
+    output_csv_path = "kitti_seq_03_recon.csv"
 
     with open(output_csv_path, mode="w", newline="") as file:
         writer = csv.writer(file)

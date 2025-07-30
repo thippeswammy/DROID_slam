@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from collections import OrderedDict
 from torch.multiprocessing import Process
-
+import time
 from depth_video import DepthVideo
 from droid_backend import DroidBackend
 from droid_frontend import DroidFrontend
@@ -34,9 +34,9 @@ class Droid:
 
         # ROS2 integration
         if getattr(args, "ros", False):
-            rospy.init_node('droid_slam_node', anonymous=True)
+            rospy.init_node('droid_publisher_node', anonymous=True)
             self.ros_enabled = True
-            self.pose_publisher = TrajectoryPublisher(self.video)  # supports pose+path
+            self.pose_publisher = TrajectoryPublisher()  # supports pose+path
         else:
             self.ros_enabled = False
 
@@ -51,12 +51,10 @@ class Droid:
 
         # post processor - fill in poses for non-keyframes
         self.traj_filler = PoseTrajectoryFiller(self.net, self.video)
-        print(self.traj_filler)
 
     def load_weights(self, weights):
         """ load trained model weights """
 
-        print(weights)
         self.net = DroidNet()
         state_dict = OrderedDict([
             (k.replace("module.", ""), v) for (k, v) in torch.load(weights).items()])
@@ -79,8 +77,8 @@ class Droid:
             # local bundle adjustment
             self.frontend()
 
-            if self.ros_enabled:
-                self.pose_publisher.publish_latest(tstamp)
+            # if self.ros_enabled:
+            #     self.pose_publisher.publish_latest()
 
     def terminate(self, stream=None):
         """ terminate the visualization process, return poses [t, q] """
@@ -91,16 +89,18 @@ class Droid:
         print("#" * 32)
         self.backend(7)
 
-        # if hasattr(self, 'pose_publisher'):
-        #     self.pose_publisher.destroy_node()
-        #     rclpy.shutdown()
-
-        if self.ros_enabled:
-            rospy.signal_shutdown('Finished')
-
         torch.cuda.empty_cache()
         print("#" * 32)
         self.backend(12)
 
         camera_trajectory = self.traj_filler(stream)
-        return camera_trajectory.inv().data.cpu().numpy()
+        traj_est =camera_trajectory.inv().data.cpu().numpy()
+
+        if self.ros_enabled:
+            for T in traj_est:
+                self.pose_publisher.publish_poses(T)
+            rospy.sleep(0.02)
+
+        if self.ros_enabled:
+            rospy.signal_shutdown('Finished')
+        return traj_est

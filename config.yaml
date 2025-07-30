@@ -1,10 +1,10 @@
 imagedir: data/kitti/short/image_0
 calib: data/kitti/calib.txt
-stride: 2
+stride: 1
 disable_ros: false
 disable_vis: true
 weights: droid.pth
-buffer: 30
+buffer: 900
 image_size: [384, 512]
 frontend_thresh: 15.0
-reconstruction_path: output/kitti09_recon.pth
+reconstruction_path: output/kitti_seq_03_recon.pth
