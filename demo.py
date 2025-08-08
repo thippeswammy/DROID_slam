@@ -119,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("--backend_radius", type=int, default=2)
     parser.add_argument("--backend_nms", type=int, default=3)
     parser.add_argument("--upsample", action="store_true")
-    parser.add_argument("--asynchronous", action="store_true")
+    parser.add_argument("--asynchronous", action="store_true", default=True)
     parser.add_argument("--frontend_device", type=str, default="cuda")
     parser.add_argument("--backend_device", type=str, default="cuda")
     parser.add_argument("--reconstruction_path", type=str, help="Path to save reconstruction")
@@ -194,7 +194,7 @@ if __name__ == "__main__":
 
     import csv
 
-    output_csv_path = "kitti_seq_01_recon.csv"
+    output_csv_path = "rawlog_rgbd_dataset_freiburg1_desk2.csv"
 
     with open(output_csv_path, mode="w", newline="") as file:
         writer = csv.writer(file)

@@ -158,3 +158,5 @@ figures/*.pdf
 
 /torch-1.13.0-cp38-cp38-linux_aarch64.whl
 /torch-1.13.0a0+340c4120.nv22.06-cp38-cp38-linux_aarch64.whl
+/temp/torch-1.13.0-cp38-cp38-linux_aarch64.whl
+/temp/torch-1.13.0a0+340c4120.nv22.06-cp38-cp38-linux_aarch64.whl

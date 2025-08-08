@@ -211,5 +211,5 @@ class DroidAsync:
         # fill in missing non-keyframe poses
         self.traj_filler.video = self.traj_filler.video.to(self.frontend_device)
         camera_trajectory = self.traj_filler(stream)
-
+        print("THIPPESWAMY")
         return camera_trajectory.inv().data.cpu().numpy()
