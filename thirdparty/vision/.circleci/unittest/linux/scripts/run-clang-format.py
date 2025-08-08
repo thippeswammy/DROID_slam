@@ -58,6 +58,22 @@ class ExitStatus:
 
 
 def list_files(files, recursive=False, extensions=None, exclude=None):
+    """List files with optional filtering by extensions and exclusion patterns.
+    
+    This function iterates over a list of file paths. If `recursive` is set to
+    True, it traverses directories recursively using `os.walk()`. It filters files
+    based on specified extensions and excludes files matching certain patterns. The
+    filtered file paths are collected and returned as a list.
+    
+    Args:
+        files (list): A list of file paths or directory paths.
+        recursive (bool?): If True, recursively traverse directories. Defaults to False.
+        extensions (list?): A list of file extensions to include. Defaults to an empty list.
+        exclude (list?): A list of patterns to exclude files and directories. Defaults to an empty list.
+    
+    Returns:
+        list: A list of filtered file paths.
+    """
     if extensions is None:
         extensions = []
     if exclude is None:
@@ -84,6 +100,7 @@ def list_files(files, recursive=False, extensions=None, exclude=None):
 
 
 def make_diff(file, original, reformatted):
+    """Generate a unified diff between two versions of a file."""
     return list(
         difflib.unified_diff(
             original, reformatted, fromfile=f"{file}\t(original)", tofile=f"{file}\t(reformatted)", n=3
@@ -105,6 +122,7 @@ class UnexpectedError(Exception):
 
 
 def run_clang_format_diff_wrapper(args, file):
+    """Runs clang format diff and handles exceptions."""
     try:
         ret = run_clang_format_diff(args, file)
         return ret
@@ -115,6 +133,7 @@ def run_clang_format_diff_wrapper(args, file):
 
 
 def run_clang_format_diff(args, file):
+    """Runs clang-format on a file and returns the diff with the formatted content."""
     try:
         with open(file, encoding="utf-8") as f:
             original = f.readlines()
@@ -163,20 +182,26 @@ def run_clang_format_diff(args, file):
 
 
 def bold_red(s):
+    """Wrap text in ANSI codes for bold red color."""
     return "\x1b[1m\x1b[31m" + s + "\x1b[0m"
 
 
 def colorize(diff_lines):
+    """Colorizes lines based on their prefixes."""
     def bold(s):
+        """Wrap string in ANSI escape codes to make it bold."""
         return "\x1b[1m" + s + "\x1b[0m"
 
     def cyan(s):
+        """Return a string with ANSI escape code for cyan color."""
         return "\x1b[36m" + s + "\x1b[0m"
 
     def green(s):
+        """Wrap text in green ANSI color codes."""
         return "\x1b[32m" + s + "\x1b[0m"
 
     def red(s):
+        """Wrap text in ANSI escape codes for red color."""
         return "\x1b[31m" + s + "\x1b[0m"
 
     for line in diff_lines:
@@ -193,12 +218,14 @@ def colorize(diff_lines):
 
 
 def print_diff(diff_lines, use_color):
+    """Prints the difference lines with optional colorization."""
     if use_color:
         diff_lines = colorize(diff_lines)
     sys.stdout.writelines(diff_lines)
 
 
 def print_trouble(prog, message, use_colors):
+    """Prints an error message with optional coloring."""
     error_text = "error:"
     if use_colors:
         error_text = bold_red(error_text)
@@ -206,6 +233,18 @@ def print_trouble(prog, message, use_colors):
 
 
 def main():
+    """Main entry point for the script.
+    
+    This function parses command-line arguments, sets up signal handling, checks
+    the version of clang-format, and processes files to apply formatting. It
+    handles recursive directory traversal, parallel processing, and error
+    management.  The function uses `argparse` to handle command-line options and
+    `subprocess` to invoke clang-format. It also manages colored output based on
+    user preferences and signal handling for graceful interruption.
+    
+    Returns:
+        int: An exit status code indicating the success or failure of the operation.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--clang-format-executable",
