@@ -234,7 +234,37 @@ def patched_make_field(self, types, domain, items, **kw):
     #  backwards compatibility when passed along further down!
 
     # type: (list, unicode, tuple) -> nodes.field  # noqa: F821
+    """Creates a field node with optional type annotations and collapsible content.
+    
+    This function processes a list of field arguments and their corresponding
+    content, creating a paragraph for each item. If the field argument is found in
+    the `types` dictionary, it appends the type information to the paragraph. The
+    function handles backward compatibility by accepting additional keyword
+    arguments (`**kw`) which are passed along to other functions.
+    
+    Args:
+        types (list): A list of types associated with field arguments.
+        domain (unicode): The domain in which the field operates.
+        items (tuple): A tuple containing field argument and content pairs.
+        **kw: Additional keyword arguments for backward compatibility.
+    
+    Returns:
+        nodes.field: A field node containing the processed field name and body.
+    """
     def handle_item(fieldarg, content):
+        """Constructs a paragraph node containing a strong literal of `fieldarg` and
+        appends it to the doctree.
+        
+        This function creates a paragraph node and adds a strong literal of the field
+        argument. If the field argument is found in the `types` dictionary, it appends
+        the type information by creating cross-references with appropriate formatting.
+        The function then appends the content to the paragraph and returns the
+        constructed paragraph node.
+        
+        Args:
+            fieldarg (list): The field argument to be processed.
+            content (unicode): The content to be appended to the paragraph.
+        """
         par = nodes.paragraph()
         par += addnodes.literal_strong("", fieldarg)  # Patch: this line added
         # par.extend(self.make_xrefs(self.rolename, domain, fieldarg,
@@ -275,23 +305,8 @@ TypedField.make_field = patched_make_field
 
 
 def inject_minigalleries(app, what, name, obj, options, lines):
-    """Inject a minigallery into a docstring.
 
-    This avoids having to manually write the .. minigallery directive for every item we want a minigallery for,
-    as it would be easy to miss some.
-
-    This callback is called after the .. auto directives (like ..autoclass) have been processed,
-    and modifies the lines parameter inplace to add the .. minigallery that will show which examples
-    are using which object.
-
-    It's a bit hacky, but not *that* hacky when you consider that the recommended way is to do pretty much the same,
-    but instead with templates using autosummary (which we don't want to use):
-    (https://sphinx-gallery.github.io/stable/configuration.html#auto-documenting-your-api-with-links-to-examples)
-
-    For docs on autodoc-process-docstring, see the autodoc docs:
-    https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
-    """
-
+    """Injects a minigallery into the docstring for classes and functions."""
     if what in ("class", "function"):
         lines.append(f".. minigallery:: {name}")
         lines.append(f"    :add-heading: Examples using ``{name.split('.')[-1]}``:")
@@ -301,23 +316,24 @@ def inject_minigalleries(app, what, name, obj, options, lines):
 
 
 def inject_weight_metadata(app, what, name, obj, options, lines):
-    """This hook is used to generate docs for the models weights.
 
-    Objects like ResNet18_Weights are enums with fields, where each field is a Weight object.
-    Enums aren't easily documented in Python so the solution we're going for is to:
-
-    - add an autoclass directive in the model's builder docstring, e.g.
-
-    ```
-    .. autoclass:: torchvision.models.ResNet34_Weights
-        :members:
-    ```
-
-    (see resnet.py for an example)
-    - then this hook is called automatically when building the docs, and it generates the text that gets
-      used within the autoclass directive.
+    """Generates documentation metadata for model weights.
+    
+    This hook is used to generate detailed documentation for model weights. It
+    handles objects like ResNet18_Weights, which are enums with fields representing
+    Weight objects. The function processes these enum fields to extract relevant
+    metadata and metrics, formatting them into a structured table. If the enum has
+    no entries, it updates the lines to indicate the absence of available pre-
+    trained weights.
+    
+    Args:
+        app: The Sphinx application instance.
+        what (str): The type of the object being documented (e.g., 'class', 'function').
+        name (str): The fully qualified name of the object.
+        obj: The object being documented.
+        options: Additional options for the directive.
+        lines (list): A list of strings where the generated documentation will be stored.
     """
-
     if obj.__name__.endswith(("_Weights", "_QuantizedWeights")):
 
         if len(obj) == 0:
@@ -376,6 +392,24 @@ def inject_weight_metadata(app, what, name, obj, options, lines):
 
 
 def generate_weights_table(module, table_name, metrics, dataset, include_patterns=None, exclude_patterns=None):
+    """Generate a weights table from a given module.
+    
+    This function extracts weights from the specified module, filters them based on
+    include and exclude patterns, and generates an RST-formatted table with metrics
+    and other details. The table is saved to a file in the 'generated' directory.
+    
+    Args:
+        module (module): The Python module containing weight definitions.
+        table_name (str): The name of the output table file without extension.
+        metrics (list of tuples): A list where each tuple contains a metric key and its corresponding display
+            name.
+        dataset (str): The dataset for which metrics are relevant.
+        include_patterns (list?): List of patterns to include weights. Defaults to None.
+        exclude_patterns (list?): List of patterns to exclude weights. Defaults to None.
+    
+    Returns:
+        None: The function writes the table to a file and does not return any value.
+    """
     weights_endswith = "_QuantizedWeights" if module.__name__.split(".")[-1] == "quantization" else "_Weights"
     weight_enums = [getattr(module, name) for name in dir(module) if name.endswith(weights_endswith)]
     weights = [w for weight_enum in weight_enums for w in weight_enum]
@@ -452,5 +486,6 @@ generate_weights_table(
 
 def setup(app):
 
+    """Set up Sphinx extensions by connecting event handlers."""
     app.connect("autodoc-process-docstring", inject_minigalleries)
     app.connect("autodoc-process-docstring", inject_weight_metadata)
