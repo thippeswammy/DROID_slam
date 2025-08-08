@@ -6,12 +6,14 @@ class BetaStatus(Directive):
     has_content = True
 
     def run(self):
+        """Generate a warning node about API being in Beta stage."""
         api_name = " ".join(self.content)
         text = f"The {api_name} is in Beta stage, and backward compatibility is not guaranteed."
         return [nodes.warning("", nodes.paragraph("", "", nodes.Text(text)))]
 
 
 def setup(app):
+    """Setup Sphinx extension with custom directives and configuration."""
     app.add_directive("betastatus", BetaStatus)
     return {
         "version": "0.1",
