@@ -27,6 +27,25 @@ RC_PATTERN = r"/v[0-9]+(\.[0-9]+)*-rc[0-9]+/"
 
 
 def build_workflows(prefix="", filter_branch=None, upload=False, indentation=6, windows_latest_only=False):
+    """Constructs a list of workflows based on specified parameters.
+    
+    This function iterates through different types of builds (wheel and conda),
+    operating systems (linux, macos, win), Python versions, CUDA versions, and
+    unicode settings. It generates workflow pairs for each combination, skipping
+    unsupported configurations like ROCm with conda packages. Additionally, it
+    handles specific filtering logic for Windows builds and sets default filter
+    branches for certain conditions.
+    
+    Args:
+        prefix (str): A prefix string to be used in the workflows.
+        filter_branch (str?): A branch filter for limiting workflow execution. Defaults to None.
+        upload (bool): Flag indicating whether to upload the built artifacts. Defaults to False.
+        indentation (int): Number of spaces for indenting the output list. Defaults to 6.
+        windows_latest_only (bool): Flag to restrict builds to the latest Windows version only. Defaults to False.
+    
+    Returns:
+        str: A string representing the indented workflows in YAML format.
+    """
     w = []
     for btype in ["wheel", "conda"]:
         for os_type in ["linux", "macos", "win"]:
@@ -72,6 +91,7 @@ def build_workflows(prefix="", filter_branch=None, upload=False, indentation=6, 
 
 def workflow_pair(btype, os_type, python_version, cu_version, unicode, prefix="", upload=False, *, filter_branch=None):
 
+    """Generates a list of workflows based on input parameters."""
     w = []
     unicode_suffix = "u" if unicode else ""
     base_workflow_name = f"{prefix}binary_{os_type}_{btype}_py{python_version}{unicode_suffix}_{cu_version}"
@@ -93,6 +113,7 @@ def workflow_pair(btype, os_type, python_version, cu_version, unicode, prefix=""
 
 
 def build_doc_job(filter_branch):
+    """Builds a documentation job configuration with optional branch filtering."""
     job = {
         "name": "build_docs",
         "python_version": "3.7",
@@ -107,6 +128,7 @@ def build_doc_job(filter_branch):
 
 
 def upload_doc_job(filter_branch):
+    """Constructs and returns a job configuration for uploading documents."""
     job = {
         "name": "upload_docs",
         "context": "org-member",
@@ -128,6 +150,7 @@ manylinux_images = {
 
 
 def get_manylinux_image(cu_version):
+    """Return the appropriate manylinux image based on the CUDA or ROCm version."""
     if cu_version == "cpu":
         return "pytorch/manylinux-cpu"
     elif cu_version.startswith("cu"):
@@ -139,6 +162,7 @@ def get_manylinux_image(cu_version):
 
 
 def get_conda_image(cu_version):
+    """Return the appropriate Conda image based on the CUDA version."""
     if cu_version == "cpu":
         return "pytorch/conda-builder:cpu"
     elif cu_version.startswith("cu"):
@@ -150,6 +174,27 @@ def generate_base_workflow(
     base_workflow_name, python_version, cu_version, unicode, os_type, btype, *, filter_branch=None
 ):
 
+    """Generates a base workflow dictionary based on provided parameters.
+    
+    This function constructs a dictionary representing a base workflow
+    configuration. It includes settings for the Python version, CUDA version, and
+    other optional configurations like Unicode support, OS type, build type, and
+    branch filtering. Depending on the operating system and CUDA version,
+    additional entries for Docker images are added. If a filter branch is provided,
+    it sets up branch and tag filters accordingly.
+    
+    Args:
+        base_workflow_name (str): The name of the base workflow.
+        python_version (str): The Python version to be used.
+        cu_version (str): The CUDA version to be used.
+        unicode (bool): Whether Unicode support is enabled.
+        os_type (str): The type of operating system ("win", "linux", etc.).
+        btype (str): The build type.
+        filter_branch (Optional[str]): An optional branch filter for the workflow.
+    
+    Returns:
+        Dict[str, Any]: A dictionary representing the base workflow configuration.
+    """
     d = {
         "name": base_workflow_name,
         "python_version": python_version,
@@ -180,6 +225,7 @@ def generate_base_workflow(
 
 
 def gen_filter_branch_tree(*branches, tags_list=None):
+    """Generate a filter dictionary for branches with optional tags."""
     filter_dict = {"branches": {"only": [b for b in branches]}}
     if tags_list is not None:
         filter_dict["tags"] = {"only": tags_list}
@@ -187,6 +233,7 @@ def gen_filter_branch_tree(*branches, tags_list=None):
 
 
 def generate_upload_workflow(base_workflow_name, os_type, btype, cu_version, *, filter_branch=None):
+    """Generate a workflow configuration for uploading binaries."""
     d = {
         "name": f"{base_workflow_name}_upload",
         "context": "org-member",
@@ -211,6 +258,7 @@ def generate_upload_workflow(base_workflow_name, os_type, btype, cu_version, *, 
 
 def generate_smoketest_workflow(pydistro, base_workflow_name, filter_branch, python_version, os_type):
 
+    """Generates a smoke test workflow configuration."""
     required_build_suffix = "_upload"
     required_build_name = base_workflow_name + required_build_suffix
 
@@ -228,10 +276,24 @@ def generate_smoketest_workflow(pydistro, base_workflow_name, filter_branch, pyt
 
 
 def indent(indentation, data_list):
+    """Indent YAML-dumped list with specified number of spaces."""
     return ("\n" + " " * indentation).join(yaml.dump(data_list, default_flow_style=False).splitlines())
 
 
 def unittest_workflows(indentation=6):
+    """Generates a list of unittest jobs for different operating systems and device
+    types.
+    
+    This function iterates over various combinations of operating systems (linux,
+    windows, macos), device types (cpu, gpu), and Python versions. It creates a job
+    dictionary for each combination, skipping the 'gpu' device type on macOS. For
+    GPU-enabled jobs with Python versions other than 3.8, it adds specific filters.
+    The function returns an indented string representation of the jobs list.
+    
+    Args:
+        indentation (int): The number of spaces to use for indentation in the output string.
+            Defaults to 6.
+    """
     jobs = []
     for os_type in ["linux", "windows", "macos"]:
         for device_type in ["cpu", "gpu"]:
@@ -256,6 +318,17 @@ def unittest_workflows(indentation=6):
 
 
 def cmake_workflows(indentation=6):
+    """Generates a list of CMake workflow jobs for different operating systems and
+    device types.
+    
+    This function creates a set of jobs configured for Linux, Windows, and macOS
+    with CPU and GPU support. For each combination, it sets up the job name, Python
+    version, CUDA version, and optionally, a Docker image for Linux GPU jobs. The
+    jobs are then indented and returned as a formatted list.
+    
+    Args:
+        indentation (int): The number of spaces to use for indentation. Defaults to 6.
+    """
     jobs = []
     python_version = "3.8"
     for os_type in ["linux", "windows", "macos"]:
@@ -272,6 +345,20 @@ def cmake_workflows(indentation=6):
 
 
 def ios_workflows(indentation=6, nightly=False):
+    """Generates a list of iOS build jobs with optional nightly configurations.
+    
+    This function creates a series of job dictionaries for building and optionally
+    uploading binary libraries for different iOS architectures. If `nightly` is
+    True, it includes additional filtering based on branch tree. The jobs are
+    indented according to the specified level before being returned.
+    
+    Args:
+        indentation (int): The number of spaces to use for indenting the output JSON.
+        nightly (bool): A flag indicating whether to include nightly build configurations.
+    
+    Returns:
+        str: A string representation of the indented job list in JSON format.
+    """
     jobs = []
     build_job_names = []
     name_prefix = "nightly_" if nightly else ""
@@ -301,6 +388,7 @@ def ios_workflows(indentation=6, nightly=False):
 
 
 def android_workflows(indentation=6, nightly=False):
+    """Generates a list of Android job configurations based on the nightly flag."""
     jobs = []
     build_job_names = []
     name_prefix = "nightly_" if nightly else ""
