@@ -81,8 +81,8 @@ class Droid:
             #     self.pose_publisher.publish_latest()
 
     def terminate(self, stream=None):
-        """ terminate the visualization process, return poses [t, q] """
 
+        """Terminate the visualization process and return trajectory estimates."""
         del self.frontend
 
         torch.cuda.empty_cache()
