@@ -100,10 +100,10 @@ if __name__ == "__main__":
     parser.add_argument("--imagedir", type=str, help="Path to image directory")
     parser.add_argument("--calib", type=str, help="Path to calibration file")
     parser.add_argument("--t0", type=int, default=0, help="Starting frame")
-    parser.add_argument("--stride", type=int, default=1, help="Frame stride")
+    parser.add_argument("--stride", type=int, help="Frame stride")
     parser.add_argument("--weights", type=str, default="droid.pth")
-    parser.add_argument("--buffer", type=int, default=1024)
-    parser.add_argument("--image_size", nargs='+', type=int, default=[240, 320])
+    parser.add_argument("--buffer", type=int)
+    parser.add_argument("--image_size", nargs='+', type=int)
     parser.add_argument("--disable_vis", default=True, action="store_true")
     parser.add_argument("--disable_ros", default=False, action="store_true")
     # VO-specific parameters
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument("--backend_radius", type=int, default=2)
     parser.add_argument("--backend_nms", type=int, default=3)
     parser.add_argument("--upsample", action="store_true")
-    parser.add_argument("--asynchronous", action="store_true", default=True)
+    parser.add_argument("--asynchronous", action="store_true",)
     parser.add_argument("--frontend_device", type=str, default="cuda")
     parser.add_argument("--backend_device", type=str, default="cuda")
     parser.add_argument("--reconstruction_path", type=str, help="Path to save reconstruction")
@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     args.stereo = False
     torch.multiprocessing.set_start_method('spawn')
-
+    print("args =>", args)
     if args.reconstruction_path is not None:
         args.upsample = True
 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         with open(output_file, 'r') as f:
             avg_res = json.load(f)
         print(avg_res)
-        os.remove(output_file)
+        # os.remove(output_file)
     else:
         print("No monitoring results found.")
 
@@ -193,8 +193,8 @@ if __name__ == "__main__":
         os.remove(stop_file)
 
     import csv
-
-    output_csv_path = "rawlog_rgbd_dataset_freiburg1_desk2.csv"
+    print(args.reconstruction_path[:-3]+'csv')
+    output_csv_path = args.reconstruction_path[:-3] + "csv"
 
     with open(output_csv_path, mode="w", newline="") as file:
         writer = csv.writer(file)
@@ -207,6 +207,6 @@ if __name__ == "__main__":
                 t = T[:3]  # x, y, z
                 q = T[3:]  # qx, qy, qz, qw
                 writer.writerow([i] + t.tolist() + q.tolist())
-
+    print("Saved Done")
     if args.reconstruction_path is not None:
         save_reconstruction(droid, args.reconstruction_path)

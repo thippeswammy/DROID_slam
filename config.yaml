@@ -1,10 +1,11 @@
-imagedir: data/kitti/short/image_0
-calib: data/kitti/calib.txt
-stride: 1
+imagedir: data/Gitam/01/images_00
+calib: data/Gitam/calib.txt
+stride: 3
 disable_ros: false
 disable_vis: true
 weights: droid.pth
-buffer: 900
-image_size: [384, 512]
+buffer: 1110
+image_size: [1920, 1080]
 frontend_thresh: 15.0
-reconstruction_path: output/kitti_seq_03_recon.pth
+reconstruction_path: output/2025_09_08_4_Gitam_seq_01_recon.pth
+asynchronous: false

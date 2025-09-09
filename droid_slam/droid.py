@@ -99,7 +99,7 @@ class Droid:
         if self.ros_enabled:
             for T in traj_est:
                 self.pose_publisher.publish_poses(T)
-            rospy.sleep(0.02)
+            rospy.sleep(0.001)
 
         if self.ros_enabled:
             rospy.signal_shutdown('Finished')
